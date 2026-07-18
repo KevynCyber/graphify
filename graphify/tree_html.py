@@ -258,7 +258,7 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
     <svg id="tree-svg" width="{svg_width}" height="{svg_height}"></svg>
   </div>
 
-  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js" integrity="sha384-CjloA8y00+1SDAUkjs099PVfnY2KmDC2BZnws9kh8D/lX1s46w6EPhpXdqMfjK6i" crossorigin="anonymous"></script>
   <script>
     const initialJsonData = {data_json};
 
