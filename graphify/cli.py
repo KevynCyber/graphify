@@ -17,9 +17,9 @@ _SEARCH_NUDGE = json.dumps({
     "hookSpecificOutput": {
         "hookEventName": "PreToolUse",
         "additionalContext": (
-            'MANDATORY: graphify-out/graph.json exists. You MUST run '
-            '`graphify query "<question>"` before grepping raw files. Only grep '
-            'after graphify has oriented you, or to modify/debug specific lines.'
+            'A graphify knowledge graph was found in the current working directory. '
+            'Consider `graphify query "<question>"` before grepping raw files, if it '
+            'covers what you are looking at. Grep directly to modify/debug specific lines.'
         ),
     }
 }, ensure_ascii=False, separators=(",", ":")) + "\n"
@@ -27,13 +27,12 @@ _READ_NUDGE = json.dumps({
     "hookSpecificOutput": {
         "hookEventName": "PreToolUse",
         "additionalContext": (
-            'MANDATORY: graphify-out/graph.json exists. You MUST run graphify '
-            'before reading source files. Use: `graphify query "<question>"` '
-            '(scoped subgraph), `graphify explain "<concept>"`, or '
-            '`graphify path "<A>" "<B>"`. Only read raw files after graphify has '
-            'oriented you, or to modify/debug specific lines. This rule applies to '
-            'subagents too — include it in every subagent prompt involving code '
-            'exploration.'
+            'A graphify knowledge graph was found near this file. Consider '
+            '`graphify query "<question>"` (scoped subgraph), `graphify explain '
+            '"<concept>"`, or `graphify path "<A>" "<B>"` before reading raw source, '
+            'if it covers what you are looking at. Read directly to modify/debug '
+            'specific lines. Worth passing along in subagent prompts involving code '
+            'exploration too.'
         ),
     }
 }, ensure_ascii=False, separators=(",", ":")) + "\n"
