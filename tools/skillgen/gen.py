@@ -34,7 +34,7 @@ except ModuleNotFoundError:  # Python 3.10 - graphify supports >=3.10
     import tomli as tomllib  # type: ignore[no-redef]
 from dataclasses import dataclass, field
 from pathlib import Path
-
+from tools.skillgen.blocks import resolve_blocks
 # tools/skillgen/gen.py -> repo root is two parents up.
 SKILLGEN_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SKILLGEN_DIR.parent.parent
@@ -360,7 +360,7 @@ def _render_frontmatter(platform: Platform) -> str:
 def _render_core(platform: Platform) -> str:
     """Fill the shared core template's per-platform slots for this platform."""
     template = _read_fragment(f"core/{platform.core}.md")
-
+    template = resolve_blocks(template, platform.shell)
     if platform.dispatch is None:
         raise ValueError(f"split platform '{platform.key}' is missing a dispatch variant")
 

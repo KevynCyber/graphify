@@ -346,7 +346,7 @@ Path('graphify-out/.graphify_semantic.json').write_text(json.dumps(merged, inden
 print(f'Extraction complete - {len(deduped)} nodes, {len(all_edges)} edges ({len(cached[\"nodes\"])} from cache, {len(new.get(\"nodes\",[]))} new)')
 "
 ```
-Clean up temp files: `rm -f graphify-out/.graphify_cached.json graphify-out/.graphify_uncached.txt graphify-out/.graphify_semantic_new.json`
+Clean up temp files `graphify-out/.graphify_cached.json`, `graphify-out/.graphify_uncached.txt`, `graphify-out/.graphify_semantic_new.json`.
 
 #### Part C - Merge AST + semantic into final extraction
 
