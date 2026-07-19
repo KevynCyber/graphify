@@ -19,4 +19,7 @@ Parse each result as JSON. Accumulate nodes/edges/hyperedges across all results 
 
 Subagent prompt template:
 
-See `references/extraction-spec.md` for the compact subagent prompt (rules, node-ID format, confidence rubric, hyperedge and vision rules, JSON schema). Load it only here, only when at least one chunk holds a doc, paper, or image; a pure-code corpus has skipped Part B and never reads it. Pass each agent that prompt verbatim with FILE_LIST, CHUNK_NUM, TOTAL_CHUNKS, and DEEP_MODE substituted, and have it return the JSON inline.
+`references/extraction-spec.md` holds the compact subagent prompt (rules, node-ID format, confidence rubric, hyperedge and vision rules, JSON
+schema) at SPEC_PATH, the same absolute path from Step B0. Only relevant when at least one chunk holds a doc, paper, or image; a pure-code corpus
+has skipped Part B and never needs it. Pass each agent SPEC_PATH and tell it to read that file as its prompt and follow it, substituting FILE_LIST,
+CHUNK_NUM, TOTAL_CHUNKS, and DEEP_MODE, then return the JSON inline.
