@@ -533,6 +533,20 @@ These are only needed for **headless / CI extraction** (`graphify extract`). Whe
 
 ---
 
+## Building graspologic-native from source (optional)
+
+The `leiden` extra depends on [`graspologic-native`](https://github.com/graspologic-org/graspologic-native), the Rust engine behind Leiden clustering. `pip install graphifyy[leiden]` pulls the prebuilt PyPI wheel; most users never need anything more.
+
+To build and audit it from source instead (e.g. for a supply-chain review, or a platform without a prebuilt wheel):
+
+```bash
+python scripts/build_graspologic_native.py [--ref v1.3.1] [--install]
+```
+
+Clones the pinned tag, runs a static-analysis pass over the Rust source flagging common supply-chain red flags (unsafe blocks, process execution, network access, env var reads, filesystem writes, embedded blobs, raw memory ops, `build.rs` scripts), builds the wheel with `maturin`, and writes it plus a sha256 audit manifest to `vendor/graspologic-native/` (gitignored). Requires `git`, a Rust toolchain, and `maturin` (`pip install maturin`). Pass `--install` to install the resulting wheel into the current interpreter before running `pip install -e .[leiden]`, so pip sees the constraint already satisfied instead of pulling the PyPI wheel over it.
+
+---
+
 ## Troubleshooting
 
 **`graphify: command not found` after installing**
