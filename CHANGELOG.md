@@ -2,6 +2,10 @@
 
 Full release notes with details on each version: [GitHub Releases](https://github.com/safishamsi/graphify/releases)
 
+## 0.9.19 (2026-07-18)
+
+- Fix: the `leiden` extra and `_partition()` in `graphify/cluster.py` now depend on `graspologic-native` directly instead of `graspologic` (#1955). `graspologic`'s `__init__.py` eagerly imports its whole package (gensim, umap-learn, POT, hyppo, scikit-learn, seaborn, matplotlib, ...), a dependency chain that fails to build on Python 3.13+ — the reason the `leiden` extra carried a `python_version < '3.13'` marker, which silently downgraded every 3.13+ install to the pure-Python NetworkX Louvain fallback instead of Leiden. `graspologic-native` is the Rust engine `graspologic.partition.leiden` wraps internally; it ships `abi3` wheels for Python 3.9 through 3.13+ and depends only on `numpy`/`scipy`. `_partition()` now calls `graspologic_native.leiden()` directly, replicating the thin edge-list-building and node-id-mapping `graspologic.partition.leiden` used to do, restoring the compiled Leiden path (and its clustering-quality and performance edge over Louvain) on Python 3.13+ without graspologic's broken transitive dependencies. The `python_version < '3.13'` marker is gone; `graspologic-native>=1.3.0` is now the unconditional `leiden`/`all` extra dependency.
+
 ## 0.9.18 (2026-07-17)
 
 - Fix: an incomplete extraction no longer force-writes a partial graph over a complete one (#1951, thanks @TPAteeq). A crashed AST/semantic pass, a some-chunks-failed run, or a walk that couldn't fully enumerate the corpus (permission-denied subtree) produced a smaller graph that the `to_json(force=True)` path wrote anyway, bypassing the #479 shrink guard; the `--no-cluster` raw dump had no guard at all. Both paths now refuse to overwrite a larger existing graph when the run was incomplete (exit 1, nothing written) unless `--allow-partial` is passed, and a present-but-unparseable existing graph fails closed (a corrupt/mid-write file could be hiding a complete graph). `detect()`'s `walk_errors` now count as incomplete too.

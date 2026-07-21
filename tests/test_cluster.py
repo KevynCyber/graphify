@@ -1,9 +1,10 @@
 import json
 import sys
 import networkx as nx
+import pytest
 from pathlib import Path
 from graphify.build import build_from_json
-from graphify.cluster import cluster, cohesion_score, remap_communities_to_previous, score_all
+from graphify.cluster import cluster, cohesion_score, remap_communities_to_previous, score_all, _partition
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -51,6 +52,61 @@ def test_score_all_keys_match_communities():
     communities = cluster(G)
     scores = score_all(G, communities)
     assert set(scores.keys()) == set(communities.keys())
+
+
+def test_cluster_uses_graspologic_native_when_available():
+    """Regression test for the graspologic -> graspologic-native swap.
+
+    When graspologic_native is importable, cluster() must route through its
+    Leiden implementation end-to-end (via _partition) and still return a
+    complete, non-empty partition that covers every node in the graph -
+    i.e. the native-library integration must not silently drop nodes.
+    """
+    pytest.importorskip("graspologic_native")
+    G = make_graph()
+    communities = cluster(G)
+    assert isinstance(communities, dict)
+    assert communities
+    all_nodes = {n for nodes in communities.values() for n in nodes}
+    assert all_nodes == set(G.nodes)
+
+
+def test_cluster_falls_back_to_louvain_without_graspologic_native(monkeypatch):
+    """Regression test for the Louvain fallback branch of _partition().
+
+    Simulates graspologic_native being unavailable (regardless of whether
+    it's actually installed on the machine running this test) by making the
+    import raise ImportError. cluster() must still return a complete,
+    non-empty partition via networkx's louvain_communities so the fallback
+    path can't silently break even on dev machines that always have
+    graspologic-native installed.
+    """
+    monkeypatch.setitem(sys.modules, "graspologic_native", None)
+    G = make_graph()
+    communities = cluster(G)
+    assert isinstance(communities, dict)
+    assert communities
+    all_nodes = {n for nodes in communities.values() for n in nodes}
+    assert all_nodes == set(G.nodes)
+
+
+def test_partition_result_is_deterministic():
+    """Regression test locking in the seed=42 determinism contract.
+
+    Callers such as community_member_sigs() fingerprint community
+    membership and rely on _partition() producing the same node ->
+    community assignment across runs on the same graph. Two consecutive
+    calls on an identical graph must return identical partitions.
+    """
+    G = nx.Graph()
+    G.add_edges_from([
+        ("a", "b"), ("b", "c"), ("a", "c"),
+        ("c", "d"),
+        ("d", "e"), ("e", "f"), ("d", "f"),
+    ])
+    partition1 = _partition(G, resolution=1.0)
+    partition2 = _partition(G, resolution=1.0)
+    assert partition1 == partition2
 
 
 def test_cluster_does_not_write_to_stdout(capsys):

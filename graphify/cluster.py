@@ -1,20 +1,21 @@
-"""Community detection on NetworkX graphs. Uses Leiden (graspologic) if available, falls back to Louvain (networkx). Splits oversized communities. Returns cohesion scores."""
+"""Community detection on NetworkX graphs. Uses Leiden (graspologic-native) if available, falls back to Louvain (networkx). Splits oversized communities. Returns cohesion scores."""
 from __future__ import annotations
 import contextlib
 import inspect
 import io
 import json
-import sys
+import warnings
 import networkx as nx
 
 
 def _suppress_output():
     """Context manager to suppress stdout/stderr during library calls.
 
-    graspologic's leiden() emits ANSI escape sequences (progress bars,
-    colored warnings) that corrupt PowerShell 5.1's scroll buffer on
-    Windows (see issue #19). Redirecting stdout/stderr to devnull during
-    the call prevents this without losing any graphify output.
+    Native/compiled clustering backends have historically emitted ANSI
+    escape sequences (progress bars, colored warnings) that corrupt
+    PowerShell 5.1's scroll buffer on Windows (see issue #19). Redirecting
+    stdout/stderr to devnull during the call prevents this without losing
+    any graphify output.
     """
     return contextlib.redirect_stdout(io.StringIO())
 
@@ -22,14 +23,16 @@ def _suppress_output():
 def _partition(G: nx.Graph, resolution: float = 1.0) -> dict[str, int]:
     """Run community detection. Returns {node_id: community_id}.
 
-    Tries Leiden (graspologic) first — best quality.
-    Falls back to Louvain (built into networkx) if graspologic is not installed.
+    Tries Leiden (graspologic-native, Rust) first — best quality.
+    Falls back to Louvain (built into networkx) if graspologic-native is not
+    installed.
 
     resolution > 1.0 → more, smaller communities.
     resolution < 1.0 → fewer, larger communities.
 
-    Output from graspologic is suppressed to prevent ANSI escape codes
-    from corrupting terminal scroll buffers on Windows PowerShell 5.1.
+    Output is suppressed during the native call as a defensive guard against
+    progress-bar/ANSI output corrupting terminal scroll buffers on Windows
+    PowerShell 5.1 (issue #19).
     """
     stable = nx.Graph()
     stable.add_nodes_from(sorted(G.nodes(), key=str))
@@ -45,27 +48,34 @@ def _partition(G: nx.Graph, resolution: float = 1.0) -> dict[str, int]:
         stable.add_edge(src, tgt, **attrs)
 
     try:
-        from graspologic.partition import leiden
-        lsig = inspect.signature(leiden).parameters
-        kwargs: dict = {}
-        if "random_seed" in lsig:
-            kwargs["random_seed"] = 42
-        if "trials" in lsig:
-            kwargs["trials"] = 1
-        if "resolution" in lsig:
-            kwargs["resolution"] = resolution
-        # Suppress graspologic output to prevent ANSI escape codes from
-        # corrupting PowerShell 5.1 scroll buffer (issue #19)
-        old_stderr = sys.stderr
-        try:
-            sys.stderr = io.StringIO()
-            with _suppress_output():
-                result = leiden(stable, **kwargs)
-        finally:
-            sys.stderr = old_stderr
-        return result
+        import graspologic_native as gn
     except ImportError:
-        pass
+        gn = None
+
+    if gn is not None:
+        node_str_map: dict[str, object] = {str(node): node for node in stable.nodes}
+        edges = [
+            (str(src), str(tgt), float(attrs.get("weight", 1.0)))
+            for src, tgt, attrs in stable.edges(data=True)
+        ]
+        with _suppress_output():
+            _modularity, partition = gn.leiden(
+                edges=edges,
+                starting_communities=None,
+                resolution=resolution,
+                randomness=0.001,
+                iterations=1,
+                use_modularity=True,
+                seed=42,
+                trials=1,
+            )
+        proper_partition = {node_str_map[key]: value for key, value in partition.items()}
+        if len(proper_partition) < len(node_str_map):
+            warnings.warn(
+                "Leiden partition does not contain all nodes from the input graph "
+                "because the input graph contained isolate nodes."
+            )
+        return proper_partition
 
     # Fallback: networkx louvain (available since networkx 2.7).
     # Inspect kwargs to stay compatible across NetworkX versions — max_level

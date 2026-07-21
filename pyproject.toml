@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "graphifyy"
-version = "0.9.18"
+version = "0.9.19"
 description = "AI coding assistant skill (Claude Code, CodeBuddy, Codex, OpenCode, Kilo Code, Cursor, Gemini CLI, Aider, OpenClaw, Factory Droid, Trae, Hermes, Kiro, Pi, Devin CLI, Google Antigravity) - turn any folder of code, docs, papers, images, or videos into a queryable knowledge graph"
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -57,7 +57,13 @@ falkordb = ["falkordb"]
 pdf = ["pypdf>=6.12.0", "markdownify"]
 watch = ["watchdog"]
 svg = ["matplotlib", "numpy>=2.0; python_version >= '3.13'"]
-leiden = ["graspologic; python_version < '3.13'"]
+# graphify only calls graspologic.partition.leiden, but importing graspologic
+# eagerly imports its entire package (gensim, umap-learn, POT, hyppo, ...),
+# a heavy chain that fails to build on Python 3.13+. graspologic-native is the
+# actual Rust engine graspologic.partition.leiden wraps; depending on it
+# directly gets the same (compiled) Leiden algorithm without the broken
+# transitive deps, and it ships abi3 wheels for 3.9-3.13+ (#1955).
+leiden = ["graspologic-native>=1.3.0"]
 office = ["python-docx", "openpyxl"]
 google = ["openpyxl"]
 postgres = ["psycopg[binary]"]
@@ -80,7 +86,7 @@ pascal = ["tree-sitter-pascal"]
 # avoids breaking the default `uv tool install graphifyy` for everyone (#1104).
 dm = ["tree-sitter-dm"]
 terraform = ["tree-sitter-hcl"]
-all = ["mcp", "starlette>=1.3.1", "neo4j", "falkordb", "pypdf>=6.12.0", "markdownify", "watchdog", "graspologic; python_version < '3.13'", "python-docx", "openpyxl", "faster-whisper; python_version >= '3.11'", "yt-dlp>=2026.6.9", "matplotlib", "numpy>=2.0; python_version >= '3.13'", "openai", "tiktoken", "boto3", "anthropic", "tree-sitter-sql", "jieba", "tree-sitter-dm", "tree-sitter-hcl", "tree-sitter-pascal"]
+all = ["mcp", "starlette>=1.3.1", "neo4j", "falkordb", "pypdf>=6.12.0", "markdownify", "watchdog", "graspologic-native>=1.3.0", "python-docx", "openpyxl", "faster-whisper; python_version >= '3.11'", "yt-dlp>=2026.6.9", "matplotlib", "numpy>=2.0; python_version >= '3.13'", "openai", "tiktoken", "boto3", "anthropic", "tree-sitter-sql", "jieba", "tree-sitter-dm", "tree-sitter-hcl", "tree-sitter-pascal"]
 
 [project.scripts]
 graphify = "graphify.__main__:main"
