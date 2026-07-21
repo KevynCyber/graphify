@@ -4,11 +4,13 @@ Call the Agent tool multiple times IN THE SAME RESPONSE - one call per chunk. Th
 
 **IMPORTANT - subagent type:** Always use `subagent_type="general-purpose"`. Do NOT use `Explore` - it is read-only and cannot write chunk files to disk, which silently drops extraction results. General-purpose has Write and Bash access which the subagent needs.
 
+**IMPORTANT - subagent model:** Always pass `model="sonnet"` on every dispatch - don't inherit the parent session's model (Opus/Haiku).
+
 Concrete example for 3 chunks:
 ```
-[Agent tool call 1: files 1-15, subagent_type="general-purpose"]
-[Agent tool call 2: files 16-30, subagent_type="general-purpose"]
-[Agent tool call 3: files 31-45, subagent_type="general-purpose"]
+[Agent tool call 1: files 1-15, subagent_type="general-purpose", model="sonnet"]
+[Agent tool call 2: files 16-30, subagent_type="general-purpose", model="sonnet"]
+[Agent tool call 3: files 31-45, subagent_type="general-purpose", model="sonnet"]
 ```
 All three in one message. Not three separate messages.
 
