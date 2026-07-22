@@ -138,12 +138,15 @@ def test_posix_core_render_matches_pinned_pre_conversion_baseline():
     byte-identical to the current bash blocks. Pins the exact pre-conversion
     rendered skill body (git blob at the commit immediately before this
     conversion work) as the regression baseline every future posix render
-    must still reproduce byte for byte, with one pre-approved exception: the
-    stray `rm -f` prose line right after MERGE_SEMANTIC was deliberately
+    must still reproduce byte for byte, with two pre-approved exceptions: (1)
+    the stray `rm -f` prose line right after MERGE_SEMANTIC was deliberately
     reworded to platform-neutral prose (it is not itself a 16th marker, so it
-    renders identically on both shells) -- that specific wording change was
-    part of the original conversion design, not drift. Everything else is
-    still a hard characterization lock (ADR-0005).
+    renders identically on both shells) -- part of the original conversion
+    design, not drift; (2) commit d92a132 pinned Step B2 extraction subagents
+    to model="sonnet" in fragments/dispatch/agent-tool-disk.md, a claude-only
+    dispatch fragment unrelated to the block conversion -- codex does not
+    render that fragment, so only the claude artifact carries this exception.
+    Everything else is still a hard characterization lock (ADR-0005).
     """
     platforms = gen.load_platforms()
     old_line = (
@@ -154,10 +157,33 @@ def test_posix_core_render_matches_pinned_pre_conversion_baseline():
         "Clean up temp files `graphify-out/.graphify_cached.json`, "
         "`graphify-out/.graphify_uncached.txt`, `graphify-out/.graphify_semantic_new.json`."
     )
+    sonnet_pin_old = (
+        "Concrete example for 3 chunks:\n"
+        "```\n"
+        '[Agent tool call 1: files 1-15, subagent_type="general-purpose"]\n'
+        '[Agent tool call 2: files 16-30, subagent_type="general-purpose"]\n'
+        '[Agent tool call 3: files 31-45, subagent_type="general-purpose"]\n'
+        "```"
+    )
+    sonnet_pin_new = (
+        '**IMPORTANT - subagent model:** Always pass `model="sonnet"` on every dispatch - '
+        "don't inherit the parent session's model (Opus/Haiku).\n\n"
+        "Concrete example for 3 chunks:\n"
+        "```\n"
+        '[Agent tool call 1: files 1-15, subagent_type="general-purpose", model="sonnet"]\n'
+        '[Agent tool call 2: files 16-30, subagent_type="general-purpose", model="sonnet"]\n'
+        '[Agent tool call 3: files 31-45, subagent_type="general-purpose", model="sonnet"]\n'
+        "```"
+    )
+    exceptions = {
+        "claude": [(old_line, new_line), (sonnet_pin_old, sonnet_pin_new)],
+        "codex": [(old_line, new_line)],
+    }
     for key, artifact_path in (("claude", "graphify/skill.md"), ("codex", "graphify/skill-codex.md")):
         baseline = gen._git_show(f"{_PRE_CONVERSION_SHA}:{artifact_path}")
-        assert old_line in baseline, f"[{key}] pinned baseline no longer contains the expected pre-reword line"
-        baseline = baseline.replace(old_line, new_line)
+        for old, new in exceptions[key]:
+            assert old in baseline, f"[{key}] pinned baseline no longer contains an expected pre-change line"
+            baseline = baseline.replace(old, new)
         rendered = gen.render_all(platforms, only=key)[0].content
         assert rendered == baseline, f"[{key}] posix render drifted from the pre-conversion baseline"
 
